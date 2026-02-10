@@ -1,6 +1,26 @@
 # PRD System
 
-A full-stack AI-powered system for creating and reviewing Product Requirements Documents (PRDs) using Claude AI.
+A full-stack AI-powered SaaS system for creating and reviewing Product Requirements Documents (PRDs) with multi-user support and encrypted API keys.
+
+## 🎉 New Features (v2.0)
+
+### Multi-User Support
+- ✅ **User Registration** - Self-service account creation
+- ✅ **Secure Authentication** - Session-based auth with bcrypt password hashing
+- ✅ **Per-User Settings** - Each user has separate encrypted configuration
+- ✅ **Default Admin Account** - Admin/Admin credentials for quick start
+
+### Encrypted API Keys
+- 🔒 **AES-256-GCM Encryption** - Military-grade encryption for all sensitive data
+- 🔒 **Secure Storage** - API keys encrypted before database storage
+- 🔒 **Auto-decryption** - Seamless decryption when accessing services
+- 🔒 **Unique Encryption Keys** - Each deployment has its own encryption key
+
+### Database Storage
+- 💾 **SQLite Database** - File-based database (easily upgradeable to PostgreSQL)
+- 💾 **User Accounts** - Separate accounts with email/username
+- 💾 **Session Management** - 7-day session expiration with automatic cleanup
+- 💾 **Settings Persistence** - No need to re-enter credentials after logout
 
 ## Features
 
@@ -67,16 +87,43 @@ cd prd-system
 ```bash
 cd backend
 npm install
+
+# Install database and encryption dependencies
+npm install prisma@5.22.0 @prisma/client@5.22.0 bcryptjs@2.4.3
+npm install --save-dev @types/bcryptjs@2.4.6
 ```
 
-### 3. Install Frontend Dependencies
+### 3. Setup Database
+
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Create database
+npx prisma db push
+```
+
+This creates `backend/prisma/prd-system.db` with tables for users, sessions, and encrypted settings.
+
+### 4. Generate Encryption Key
+
+```bash
+# Generate and add encryption key to .env
+echo "" >> .env
+echo "# Encryption key for API keys" >> .env
+node -e "console.log('ENCRYPTION_KEY=' + require('crypto').randomBytes(32).toString('hex'))" >> .env
+```
+
+**⚠️ Important:** Keep this encryption key secure! If lost, encrypted data cannot be recovered.
+
+### 5. Install Frontend Dependencies
 
 ```bash
 cd ../frontend
 npm install
 ```
 
-### 4. Configure Environment Variables
+### 6. Configure Environment Variables
 
 #### Backend Configuration
 
@@ -85,28 +132,28 @@ cd ../backend
 cp .env.example .env
 ```
 
-Edit `backend/.env` and add your credentials:
+Edit `backend/.env`:
 
 ```env
-# Required
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-
-# Optional - Jira Integration
-JIRA_API_TOKEN=your-jira-token
-JIRA_EMAIL=your-email@company.com
-JIRA_BASE_URL=https://yourcompany.atlassian.net
-
-# Optional - Confluence Integration
-CONFLUENCE_API_TOKEN=your-confluence-token
-CONFLUENCE_BASE_URL=https://yourcompany.atlassian.net/wiki
-
-# Optional - Notion Integration
-NOTION_API_KEY=secret_your-notion-key
+# Encryption Key (REQUIRED - generated in step 4)
+ENCRYPTION_KEY=<your-64-character-hex-key>
 
 # Server Configuration
 PORT=3001
 FRONTEND_URL=http://localhost:5173
+
+# API Keys (OPTIONAL - can be configured per-user via Settings page)
+# These serve as fallback values if user hasn't configured their own keys
+GEMINI_API_KEY=your-api-key-here
+JIRA_API_TOKEN=your-jira-token
+JIRA_EMAIL=your-email@company.com
+JIRA_BASE_URL=https://yourcompany.atlassian.net
+CONFLUENCE_API_TOKEN=your-confluence-token
+CONFLUENCE_BASE_URL=https://yourcompany.atlassian.net/wiki
+NOTION_API_KEY=secret_your-notion-key
 ```
+
+**Note:** With multi-user support, each user can configure their own API keys via the Settings page. Environment variables now serve as optional fallbacks.
 
 #### Frontend Configuration
 
@@ -254,6 +301,53 @@ prd-system/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Server health check |
+
+## Getting Started
+
+### First-Time Setup
+
+1. **Start the backend:**
+```bash
+cd backend
+npm run dev
+```
+
+The server will:
+- Create the database automatically
+- Generate a default Admin account (Admin/Admin)
+- Initialize encryption
+
+2. **Start the frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+3. **Login:**
+- Navigate to http://localhost:5173
+- Login with **Admin/Admin** (default account)
+- Or click "Create new account" to register
+
+4. **Configure Your Settings:**
+- Click the **⚙️ Settings** tab
+- Add your Gemini API key
+- Optionally configure Jira, Confluence, or Notion
+- Your API keys are encrypted before storage
+- Settings persist across sessions
+
+### User Management
+
+#### Registering a New User
+1. Click "Create new account" on login page
+2. Fill in email, username, and password (min 6 characters)
+3. Click "Register"
+4. Login with your new credentials
+
+#### Multiple Users
+- Each user has separate encrypted settings
+- Users can configure different API keys
+- No interference between user configurations
+- Admin account can be used alongside custom accounts
 
 ## Usage Examples
 

@@ -1,5 +1,6 @@
 import { JiraTicket, JiraComment } from '../../../shared/types/jira';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { configService } from './config';
 
 let jiraInstance: JiraService | null = null;
 
@@ -35,27 +36,30 @@ function extractTextFromADFNode(node: any): string {
 }
 
 export class JiraService {
-  private baseUrl: string;
-  private email: string;
-  private apiToken: string;
-  private authHeader: string;
+  // Use getters to dynamically read from ConfigService
+  private get baseUrl(): string {
+    return configService.get('JIRA_BASE_URL') || '';
+  }
+
+  private get email(): string {
+    return configService.get('JIRA_EMAIL') || '';
+  }
+
+  private get apiToken(): string {
+    return configService.get('JIRA_API_TOKEN') || '';
+  }
+
+  private get authHeader(): string {
+    return Buffer.from(`${this.email}:${this.apiToken}`).toString('base64');
+  }
 
   constructor() {
-    this.baseUrl = process.env.JIRA_BASE_URL || '';
-    this.email = process.env.JIRA_EMAIL || '';
-    this.apiToken = process.env.JIRA_API_TOKEN || '';
-    this.authHeader = Buffer.from(`${this.email}:${this.apiToken}`).toString('base64');
-
     // Debug logging
-    console.log('🔍 Jira Service initialized with:');
-    console.log('  - JIRA_BASE_URL:', this.baseUrl ? '✓ Set' : '✗ Missing');
-    console.log('  - JIRA_EMAIL:', this.email ? '✓ Set' : '✗ Missing');
-    console.log('  - JIRA_API_TOKEN:', this.apiToken ? '✓ Set' : '✗ Missing');
+    console.log('🔍 Jira Service initialized with ConfigService');
   }
 
   isConfigured(): boolean {
     const configured = !!(this.baseUrl && this.email && this.apiToken);
-    console.log('🔍 Jira isConfigured:', configured);
     return configured;
   }
 
@@ -173,7 +177,11 @@ export class JiraService {
    * Generate AI summary of Jira ticket
    */
   async generateSummary(ticket: JiraTicket): Promise<string> {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    const apiKey = configService.get('GEMINI_API_KEY');
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is required but not configured');
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }); // Use Flash for speed
 
     // Build context from ticket
@@ -222,7 +230,11 @@ ${context}`;
    * Generate combined summary for multiple tickets
    */
   async generateCombinedSummary(tickets: JiraTicket[]): Promise<string> {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    const apiKey = configService.get('GEMINI_API_KEY');
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is required but not configured');
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Build context from all tickets

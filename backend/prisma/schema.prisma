@@ -1,0 +1,64 @@
+// Prisma schema for PRD System with multi-user support
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./prd-system.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String   // bcrypt hashed
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sessions Session[]
+  settings UserSettings?
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model UserSettings {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+
+  // AI Configuration
+  aiProvider    String   @default("gemini")
+  geminiModel   String   @default("gemini-2.5-pro")
+
+  // Encrypted API Keys (stored as encrypted strings)
+  geminiApiKey        String?
+  jiraEmail           String?
+  jiraApiToken        String?
+  jiraBaseUrl         String?
+  confluenceApiToken  String?
+  confluenceBaseUrl   String?
+  notionApiKey        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

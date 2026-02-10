@@ -51,6 +51,20 @@ Thumbs.db
 # Generated PRDs
 prds/
 
+# Database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# Prisma migrations (keep schema, ignore db)
+backend/prisma/migrations/
+
+# User data
+.prd-system/
+
 # Temporary files
 tmp/
 temp/

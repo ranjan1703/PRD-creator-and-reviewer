@@ -1,8 +1,13 @@
+import { configService } from './config';
+
 export class NotionService {
-  private apiKey: string;
+  // Use getter to dynamically read from ConfigService
+  private get apiKey(): string {
+    return configService.get('NOTION_API_KEY') || '';
+  }
 
   constructor() {
-    this.apiKey = process.env.NOTION_API_KEY || '';
+    console.log('🔍 Notion Service initialized with ConfigService');
   }
 
   isConfigured(): boolean {

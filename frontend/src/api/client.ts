@@ -6,6 +6,12 @@ import type {
   ReviewPRDResponse,
   FetchJiraRequest,
   FetchJiraResponse,
+  LoginRequest,
+  LoginResponse,
+  ValidateResponse,
+  UserSettings,
+  SettingsResponse,
+  TestConnectionResponse,
 } from '../../../shared/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
@@ -16,6 +22,33 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Request interceptor: Add auth token to all requests
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor: Handle 401 errors (session expired)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Session expired or invalid, clear token and redirect to login
+      localStorage.removeItem('authToken');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const prdApi = {
   async create(request: CreatePRDRequest): Promise<CreatePRDResponse> {
@@ -98,6 +131,54 @@ export const exportApi = {
     parentPageId?: string;
   }) {
     const { data } = await apiClient.post('/export', payload);
+    return data;
+  },
+};
+
+export const authApi = {
+  async register(request: {
+    email: string;
+    username: string;
+    password: string;
+    name?: string;
+  }): Promise<{ success: boolean; userId?: string; error?: string; message?: string }> {
+    const { data } = await apiClient.post('/auth/register', request);
+    return data;
+  },
+
+  async login(request: LoginRequest): Promise<LoginResponse> {
+    const { data } = await apiClient.post<LoginResponse>('/auth/login', request);
+    return data;
+  },
+
+  async logout(): Promise<void> {
+    await apiClient.post('/auth/logout');
+  },
+
+  async validate(): Promise<ValidateResponse> {
+    const { data } = await apiClient.get<ValidateResponse>('/auth/validate');
+    return data;
+  },
+
+  async getCurrentUser(): Promise<any> {
+    const { data } = await apiClient.get('/auth/me');
+    return data;
+  },
+};
+
+export const settingsApi = {
+  async get(): Promise<SettingsResponse> {
+    const { data } = await apiClient.get<SettingsResponse>('/settings');
+    return data;
+  },
+
+  async save(settings: UserSettings): Promise<SettingsResponse> {
+    const { data } = await apiClient.post<SettingsResponse>('/settings', settings);
+    return data;
+  },
+
+  async test(integration: string, testSettings: Partial<UserSettings>): Promise<TestConnectionResponse> {
+    const { data } = await apiClient.post<TestConnectionResponse>(`/settings/test/${integration}`, testSettings);
     return data;
   },
 };

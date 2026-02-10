@@ -16,6 +16,13 @@ import prdRoutes from './routes/prd';
 import jiraRoutes from './routes/jira';
 import exportRoutes from './routes/export';
 
+// Use database-backed services (with multi-user and encryption)
+import authDBRoutes from './routes/auth-db';
+import settingsDBRoutes from './routes/settings-db';
+import { requireAuthDB } from './middleware/auth-db';
+import { databaseService } from './services/database';
+import { authDBService } from './services/auth-db';
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -28,15 +35,36 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Initialize database on startup
+async function initializeDatabase() {
+  try {
+    await databaseService.connect();
+    await authDBService.ensureDefaultAdmin();
+    console.log('✅ Database initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize database:', error);
+    process.exit(1);
+  }
+}
+
+// Health check (with database status)
+app.get('/health', async (req, res) => {
+  const dbHealthy = await databaseService.healthCheck();
+  res.json({
+    status: dbHealthy ? 'ok' : 'degraded',
+    database: dbHealthy ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// Routes
-app.use('/api/prd', prdRoutes);
-app.use('/api/jira', jiraRoutes);
-app.use('/api/export', exportRoutes);
+// Public routes (no authentication required)
+app.use('/api/auth', authDBRoutes);
+
+// Protected routes (authentication required with database)
+app.use('/api/settings', requireAuthDB, settingsDBRoutes);
+app.use('/api/prd', requireAuthDB, prdRoutes);
+app.use('/api/jira', requireAuthDB, jiraRoutes);
+app.use('/api/export', requireAuthDB, exportRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -47,8 +75,34 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 PRD System Backend running on http://localhost:${PORT}`);
-  console.log(`📝 Frontend URL: ${FRONTEND_URL}`);
-  console.log(`🤖 Gemini API Key: ${process.env.GEMINI_API_KEY ? '✓ Configured' : '✗ Missing'}`);
+// Start server with database initialization
+async function startServer() {
+  await initializeDatabase();
+
+  app.listen(PORT, () => {
+    console.log(`🚀 PRD System Backend running on http://localhost:${PORT}`);
+    console.log(`📝 Frontend URL: ${FRONTEND_URL}`);
+    console.log(`🔐 Multi-user authentication: Enabled`);
+    console.log(`🔒 API key encryption: Enabled`);
+    console.log(`💾 Database: SQLite (${process.cwd()}/prisma/prd-system.db)`);
+  });
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing database connection...');
+  await databaseService.disconnect();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('\nSIGINT received, closing database connection...');
+  await databaseService.disconnect();
+  process.exit(0);
+});
+
+// Start the server
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });

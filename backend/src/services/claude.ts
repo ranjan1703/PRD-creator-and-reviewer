@@ -2,20 +2,22 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { createPRDPrompt, SYSTEM_PROMPT as CREATOR_SYSTEM_PROMPT } from '../prompts/creator';
 import { createReviewPrompt, SYSTEM_PROMPT as REVIEWER_SYSTEM_PROMPT } from '../prompts/reviewer';
 import { ReviewResult } from '../../../shared/types/review';
+import { configService } from './config';
 
-// Using Gemini 2.5 Pro for best quality (or use 'gemini-2.5-flash' for even cheaper!)
-const MODEL = 'gemini-2.5-pro';
-
-let genAI: GoogleGenerativeAI;
+// Default model if not configured
+const DEFAULT_MODEL = 'gemini-2.5-pro';
 
 function getGeminiClient(): GoogleGenerativeAI {
-  if (!genAI) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY environment variable is required but not set');
-    }
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  // Always create a new client to pick up latest configuration
+  const apiKey = configService.get('GEMINI_API_KEY');
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is required but not configured. Please configure it in Settings.');
   }
-  return genAI;
+  return new GoogleGenerativeAI(apiKey);
+}
+
+function getModel(): string {
+  return configService.get('GEMINI_MODEL') || DEFAULT_MODEL;
 }
 
 export class ClaudeService {
@@ -26,7 +28,7 @@ export class ClaudeService {
     const userPrompt = createPRDPrompt(input);
     const client = getGeminiClient();
     const model = client.getGenerativeModel({
-      model: MODEL,
+      model: getModel(),
       systemInstruction: CREATOR_SYSTEM_PROMPT,
     });
 
@@ -55,7 +57,7 @@ export class ClaudeService {
     const userPrompt = createPRDPrompt(input);
     const client = getGeminiClient();
     const model = client.getGenerativeModel({
-      model: MODEL,
+      model: getModel(),
       systemInstruction: CREATOR_SYSTEM_PROMPT,
     });
 
@@ -140,7 +142,7 @@ export class ClaudeService {
     };
 
     const model = client.getGenerativeModel({
-      model: MODEL,
+      model: getModel(),
       systemInstruction: REVIEWER_SYSTEM_PROMPT,
       generationConfig: {
         responseMimeType: 'application/json',

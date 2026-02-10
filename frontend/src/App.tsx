@@ -1,12 +1,35 @@
 import { useState } from 'react';
 import Creator from './pages/Creator';
 import Reviewer from './pages/Reviewer';
+import { Login } from './pages/Login';
+import { Settings } from './pages/Settings';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 
-type Tab = 'create' | 'review';
+type Tab = 'create' | 'review' | 'settings';
 
-function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('create');
+  const { isAuthenticated, loading, logout } = useAuth();
 
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // User is authenticated, show main app
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -18,7 +41,7 @@ function App() {
               <h1 className="text-xl font-bold text-gray-900">PRD Creator & Reviewer</h1>
             </div>
 
-            <nav className="flex space-x-1">
+            <nav className="flex items-center space-x-1">
               <button
                 onClick={() => setActiveTab('create')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -39,6 +62,22 @@ function App() {
               >
                 Review
               </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === 'settings'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                ⚙️ Settings
+              </button>
+              <button
+                onClick={logout}
+                className="ml-4 px-4 py-2 rounded-lg font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+              >
+                Logout
+              </button>
             </nav>
           </div>
         </div>
@@ -46,12 +85,15 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Keep both components mounted, just hide the inactive one */}
+        {/* Keep all components mounted, just hide the inactive ones */}
         <div style={{ display: activeTab === 'create' ? 'block' : 'none' }}>
           <Creator />
         </div>
         <div style={{ display: activeTab === 'review' ? 'block' : 'none' }}>
           <Reviewer />
+        </div>
+        <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
+          <Settings />
         </div>
       </main>
 
@@ -62,6 +104,16 @@ function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <SettingsProvider>
+        <AppContent />
+      </SettingsProvider>
+    </AuthProvider>
   );
 }
 

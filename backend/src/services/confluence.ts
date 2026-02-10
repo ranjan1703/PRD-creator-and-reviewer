@@ -1,14 +1,23 @@
+import { configService } from './config';
+
 export class ConfluenceService {
-  private baseUrl: string;
-  private apiToken: string;
-  private authHeader: string;
+  // Use getters to dynamically read from ConfigService
+  private get baseUrl(): string {
+    return configService.get('CONFLUENCE_BASE_URL') || '';
+  }
+
+  private get apiToken(): string {
+    return configService.get('CONFLUENCE_API_TOKEN') || '';
+  }
+
+  private get authHeader(): string {
+    // For Confluence Cloud, use the same email as Jira
+    const email = configService.get('JIRA_EMAIL') || '';
+    return Buffer.from(`${email}:${this.apiToken}`).toString('base64');
+  }
 
   constructor() {
-    this.baseUrl = process.env.CONFLUENCE_BASE_URL || '';
-    this.apiToken = process.env.CONFLUENCE_API_TOKEN || '';
-    // For Confluence Cloud, use the same email as Jira
-    const email = process.env.JIRA_EMAIL || '';
-    this.authHeader = Buffer.from(`${email}:${this.apiToken}`).toString('base64');
+    console.log('🔍 Confluence Service initialized with ConfigService');
   }
 
   isConfigured(): boolean {
