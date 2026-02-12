@@ -19,8 +19,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  sessions Session[]
-  settings UserSettings?
+  sessions          Session[]
+  settings          UserSettings?
+  researchSessions  ResearchSession[]
 }
 
 model Session {
@@ -61,4 +62,84 @@ model UserSettings {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Research Planner Models
+
+model ResearchSession {
+  id                    String   @id @default(uuid())
+  userId                String
+
+  // Step 1: PM Input
+  problemStatement      String
+  productContext        String
+  targetUserSegment     String
+  expectedOutcome       String?
+  researchType          String  // 'survey' | 'interview'
+
+  // Metadata
+  status                String   @default("draft") // draft | questions_generated | data_uploaded | analyzed | completed
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                  ResearchPlan?
+  results               ResearchResults?
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ResearchPlan {
+  id              String   @id @default(uuid())
+  sessionId       String   @unique
+
+  // Step 2: AI Evaluation (JSON)
+  evaluation      String   // { clarityScore, missingInfo[], riskAreas[], suggestedGoals[], recommendedMethod }
+
+  // Step 3: Generated Questions (JSON)
+  questions       String   // Survey: [{id, text, type, options, objective}] | Interview: {script, questions[], probes[], checklist[], tips[]}
+
+  // Customization
+  tone            String   @default("exploratory") // exploratory | validation | pricing
+  depth           String   @default("standard")    // quick | standard | comprehensive
+  isEdited        Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  session         ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model ResearchResults {
+  id                  String   @id @default(uuid())
+  sessionId           String   @unique
+
+  // Step 5: Upload metadata
+  uploadedFileName    String?
+  uploadedFileType    String?  // xlsx | csv | txt
+  uploadedAt          DateTime?
+
+  // Parsed data (JSON)
+  parsedData          String   // Survey responses or interview transcripts
+
+  // Step 6: AI Analysis (JSON)
+  analysis            String   // Different structure for survey vs interview
+
+  // Step 7: Report
+  reportGenerated     Boolean  @default(false)
+  reportMarkdown      String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  session             ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
 }

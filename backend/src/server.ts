@@ -15,6 +15,7 @@ import cors from 'cors';
 import prdRoutes from './routes/prd';
 import jiraRoutes from './routes/jira';
 import exportRoutes from './routes/export';
+import researchRoutes from './routes/research';
 
 // Use database-backed services (with multi-user and encryption)
 import authDBRoutes from './routes/auth-db';
@@ -65,6 +66,7 @@ app.use('/api/settings', requireAuthDB, settingsDBRoutes);
 app.use('/api/prd', requireAuthDB, prdRoutes);
 app.use('/api/jira', requireAuthDB, jiraRoutes);
 app.use('/api/export', requireAuthDB, exportRoutes);
+app.use('/api/research', requireAuthDB, researchRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
