@@ -1,6 +1,6 @@
 # PRD System
 
-A full-stack AI-powered SaaS system for creating and reviewing Product Requirements Documents (PRDs) with multi-user support and encrypted API keys.
+A full-stack AI-powered SaaS system for creating and reviewing Product Requirements Documents (PRDs), conducting user research, and generating actionable insights with multi-user support and encrypted API keys.
 
 ## 🎉 New Features (v2.0)
 
@@ -44,14 +44,40 @@ A full-stack AI-powered SaaS system for creating and reviewing Product Requireme
   - Go-to-market readiness
 - **Scoring System**: Provides an overall quality score (0-100)
 
+### Research Planner 🔬 (NEW)
+- **7-Step Guided Workflow**: From problem formulation to actionable insights
+  1. **Problem Input** - Define research problem, context, and target segment
+  2. **AI Evaluation** - Get clarity score and suggested research goals
+  3. **Question Generation** - Auto-generate survey questions or interview guides
+  4. **Template Export** - Download Excel templates for data collection
+  5. **Results Upload** - Upload survey responses (.xlsx, .csv) or interview transcripts (.txt)
+  6. **AI Analysis** - Deep analysis identifying patterns, pain points, and opportunities
+  7. **Report Generation** - Professional reports with PDF/DOCX/Markdown export
+- **Dual Research Methods**:
+  - **Survey Research**: Quantitative analysis with response distributions, trends, and pain point ranking
+  - **Interview Research**: Qualitative analysis with theme extraction, quote highlights, and objection patterns
+- **Smart Features**:
+  - Session persistence (auto-resume on page refresh)
+  - 60-second timeout protection for AI operations
+  - Multi-level AI fallback for reliability
+  - File validation and parsing (Excel, CSV, TXT)
+  - User-scoped data isolation
+
 ## Tech Stack
 
 ### Backend
 - **Node.js** (v18+ required for native fetch API)
 - **Express** - Web framework
 - **TypeScript** - Type safety
-- **Anthropic SDK** - Claude AI integration
+- **Prisma** - Database ORM with SQLite
+- **Gemini AI** - Google Generative AI for research analysis
+- **Anthropic SDK** - Claude AI integration for PRDs
 - **Zod** - Request validation
+- **Puppeteer** - PDF generation
+- **XLSX** - Excel file parsing and generation
+- **DOCX** - Word document export
+- **Multer** - File upload handling
+- **bcryptjs** - Password hashing
 - **js-yaml** - Frontmatter parsing
 
 ### Frontend
@@ -71,7 +97,8 @@ A full-stack AI-powered SaaS system for creating and reviewing Product Requireme
 
 - **Node.js** v18+ (for native fetch API support)
 - **npm** or **yarn**
-- **Anthropic API Key** ([Get one here](https://console.anthropic.com/))
+- **Anthropic API Key** ([Get one here](https://console.anthropic.com/)) - For PRD creation and review
+- **Gemini API Key** ([Get one here](https://makersuite.google.com/app/apikey)) - For Research Planner
 
 ## Installation
 
@@ -99,11 +126,14 @@ npm install --save-dev @types/bcryptjs@2.4.6
 # Generate Prisma client
 npx prisma generate
 
-# Create database
+# Create database and run migrations
 npx prisma db push
 ```
 
-This creates `backend/prisma/prd-system.db` with tables for users, sessions, and encrypted settings.
+This creates `backend/prisma/prd-system.db` with tables for:
+- Users and authentication sessions
+- Encrypted API key settings
+- Research sessions, plans, and results
 
 ### 4. Generate Encryption Key
 
@@ -231,24 +261,49 @@ prd-system/
 │   │   ├── routes/           # API route handlers
 │   │   │   ├── prd.ts        # PRD creation and review endpoints
 │   │   │   ├── jira.ts       # Jira integration endpoints
+│   │   │   ├── research.ts   # Research planner endpoints (NEW)
 │   │   │   └── export.ts     # Export to Confluence/Notion
 │   │   ├── services/         # Business logic
-│   │   │   ├── claude.ts     # Claude AI service
+│   │   │   ├── claude.ts           # Claude AI service
+│   │   │   ├── research.ts         # Research AI service (NEW)
+│   │   │   ├── research-parser.ts  # File parsing service (NEW)
+│   │   │   ├── research-export.ts  # Report export service (NEW)
+│   │   │   ├── documentExport.ts   # PDF/DOCX export (NEW)
+│   │   │   ├── database.ts         # Prisma database service (NEW)
 │   │   │   ├── jira.ts       # Jira service
 │   │   │   ├── confluence.ts # Confluence service
 │   │   │   └── notion.ts     # Notion service
 │   │   ├── prompts/          # AI prompts
 │   │   │   ├── creator.ts    # PRD creation prompts
-│   │   │   └── reviewer.ts   # PRD review prompts
+│   │   │   ├── reviewer.ts   # PRD review prompts
+│   │   │   └── research/     # Research prompts (NEW)
+│   │   │       ├── problem-evaluator.ts
+│   │   │       ├── survey-generator.ts
+│   │   │       ├── interview-generator.ts
+│   │   │       ├── research-analyzer.ts
+│   │   │       └── report-generator.ts
+│   │   ├── seed/             # Sample data (NEW)
+│   │   │   └── research-samples.ts
+│   │   ├── middleware/       # Auth middleware (NEW)
+│   │   │   └── auth-db.ts
 │   │   └── server.ts         # Express app setup
+│   ├── prisma/               # Database (NEW)
+│   │   ├── schema.prisma     # Database schema
+│   │   └── prd-system.db     # SQLite database
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── .env.example
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
-│   │   │   ├── Creator.tsx   # PRD Creator page
-│   │   │   └── Reviewer.tsx  # PRD Reviewer page
+│   │   │   ├── Creator.tsx         # PRD Creator page
+│   │   │   ├── Reviewer.tsx        # PRD Reviewer page
+│   │   │   ├── ResearchPlanner.tsx # Research Planner page (NEW)
+│   │   │   ├── Login.tsx           # Login page (NEW)
+│   │   │   └── Settings.tsx        # Settings page (NEW)
+│   │   ├── contexts/         # React contexts (NEW)
+│   │   │   ├── AuthContext.tsx
+│   │   │   └── SettingsContext.tsx
 │   │   ├── api/
 │   │   │   └── client.ts     # API client
 │   │   ├── App.tsx           # Main app component
@@ -262,6 +317,7 @@ prd-system/
 │   └── types/                # Shared TypeScript types
 │       ├── prd.ts
 │       ├── review.ts
+│       ├── research.ts       # Research types (NEW)
 │       ├── jira.ts
 │       └── index.ts
 ├── prds/                     # Auto-saved PRDs
@@ -295,6 +351,22 @@ prd-system/
 |--------|----------|-------------|
 | GET | `/api/export/status` | Check export integrations |
 | POST | `/api/export` | Export PRD to Confluence/Notion |
+
+### Research Routes (NEW)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/research/sessions` | Create research session and evaluate problem |
+| GET | `/api/research/sessions` | List user's research sessions |
+| GET | `/api/research/sessions/:id` | Get session details with plan and results |
+| DELETE | `/api/research/sessions/:id` | Delete research session |
+| POST | `/api/research/sessions/:id/generate-questions` | Generate survey questions or interview guide |
+| PUT | `/api/research/sessions/:id/questions` | Update questions after editing |
+| GET | `/api/research/sessions/:id/export-template` | Download Excel template for data collection |
+| POST | `/api/research/sessions/:id/upload-results` | Upload survey responses or interview transcripts |
+| POST | `/api/research/sessions/:id/analyze` | Run AI analysis on uploaded results |
+| GET | `/api/research/sessions/:id/report` | Get generated research report |
+| GET | `/api/research/sessions/:id/export-report` | Download report (PDF/DOCX/Markdown) |
 
 ### Health Check
 
@@ -330,7 +402,8 @@ npm run dev
 
 4. **Configure Your Settings:**
 - Click the **⚙️ Settings** tab
-- Add your Gemini API key
+- Add your **Anthropic API key** (for PRD Creator/Reviewer)
+- Add your **Gemini API key** (for Research Planner)
 - Optionally configure Jira, Confluence, or Notion
 - Your API keys are encrypted before storage
 - Settings persist across sessions
@@ -386,7 +459,85 @@ After generating a PRD:
    - **Notion**: Parent page ID
 3. PRD will be created in the target platform
 
+### Conducting User Research (NEW)
+
+#### Survey Research Workflow
+
+1. Navigate to the **🔬 Research** tab
+2. Click "Start New Research" (or continue existing session)
+3. **Step 1 - Define Problem**:
+   - Enter problem statement (e.g., "Users are abandoning checkout flow")
+   - Add product context
+   - Define target user segment
+   - Select "Survey" as research type
+4. **Step 2 - Review Evaluation**:
+   - AI provides clarity score (0-100)
+   - Review missing information and suggested research goals
+   - Proceed to question generation
+5. **Step 3 - Generate Questions**:
+   - Select tone (exploratory/validation/pricing)
+   - Choose depth (quick/standard/comprehensive)
+   - Review 15-20 auto-generated survey questions
+   - Edit, add, or remove questions as needed
+6. **Step 4 - Export Template**:
+   - Download Excel template with question columns
+   - Collect responses from users (via email, forms, etc.)
+7. **Step 5 - Upload Results**:
+   - Upload completed survey (.xlsx or .csv file)
+   - View parsing preview with row count
+8. **Step 6 - Analyze Results**:
+   - AI analyzes response patterns and trends
+   - View top pain points ranked by frequency
+   - Explore segment differences and insight clusters
+   - Review decision signals
+9. **Step 7 - Generate Report**:
+   - Generate comprehensive research report
+   - Export as PDF, DOCX, or Markdown
+   - Share with stakeholders
+
+#### Interview Research Workflow
+
+1. Navigate to the **🔬 Research** tab
+2. **Step 1**: Define problem and select "Interview" as research type
+3. **Step 2**: Review AI evaluation
+4. **Step 3**: Generate interview discussion guide with:
+   - Opening script
+   - 20-25 questions with probing follow-ups
+   - Observation checklist
+   - Bias avoidance tips
+5. **Step 4**: Download interview guide as Excel
+6. **Step 5**: Upload interview transcripts as .txt file
+   - Format: Multiple interviews separated by `=== Interview N ===`
+   - Or single interview as plain text
+7. **Step 6**: AI extracts:
+   - Major themes with frequency counts
+   - Quote highlights with context
+   - Objection patterns
+   - Need frequency
+   - Opportunity areas
+8. **Step 7**: Generate and export report
+
+#### Session Persistence
+
+- Research sessions automatically save progress
+- Refresh the page without losing work
+- Blue banner shows existing session
+- "Start New Research" button with confirmation dialog
+- Resume from any step in the workflow
+
 ## Recent Improvements
+
+### Major Features (v3.0)
+
+🔬 **Research Planner** - Complete user research workflow automation:
+- 7-step guided process from problem to insights
+- AI-powered question generation for surveys and interviews
+- Excel/CSV file parsing and validation
+- Deep qualitative and quantitative analysis
+- Professional report generation (PDF/DOCX/Markdown)
+- Session persistence with auto-resume
+- 60-second timeout protection for AI operations
+- Multi-level fallback for reliability
 
 ### Bug Fixes & Enhancements
 
@@ -453,6 +604,37 @@ Generated PRDs are saved in `~/Documents/prd-system/prds/` with:
 - Check permissions for creating pages
 - For Confluence: Ensure space key exists
 - For Notion: Ensure parent page ID is valid
+
+### Research Planner issues
+
+**Analysis taking too long:**
+- Analysis has 60-second timeout protection
+- If it times out, try again (uses multi-level fallback)
+- Large datasets (>1000 responses) may take longer
+- Check backend console logs for detailed error messages
+
+**File upload failing:**
+- For surveys: Use `.xlsx`, `.xls`, or `.csv` files
+- For interviews: Use `.txt` files only
+- Maximum file size: 20MB
+- Ensure file has proper structure (headers for surveys)
+
+**CSV upload not working:**
+- CSV is only supported for **Survey** research type
+- For interviews, use TXT format with transcripts
+- Verify research type selection in Step 1
+
+**Report generation failing:**
+- Ensure Gemini API key is configured in Settings
+- Check that analysis completed successfully
+- Report generation has 60-second timeout
+- Try exporting as Markdown first if PDF/DOCX fails
+
+**Session not persisting:**
+- Sessions are stored in browser localStorage
+- Clearing browser data will remove sessions
+- Use the same browser to resume work
+- Blue banner indicates existing session
 
 ## License
 
